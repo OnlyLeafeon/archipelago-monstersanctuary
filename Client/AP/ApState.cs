@@ -83,6 +83,8 @@ namespace Archipelago.MonsterSanctuary.Client.AP
 
                 Items.ResyncSentItems();
 
+                Monsters.BuildMonsterJournalLocationData();
+
                 ScoutAllLocations();
             }
             else if (loginResult is LoginFailure loginFailure)

@@ -187,6 +187,56 @@ namespace Archipelago.MonsterSanctuary.Client.AP
         }
 
         /// <summary>
+        /// A dictionary that summarizes the location data for all monsters that appear in encounters
+        /// This is used by the monster journal to display where monsters can be found.
+        /// </summary>
+        public static Dictionary<Monster, MonsterJournalLocationData> JournalLocationData = new();
+
+        public static string GetMonsterJournalLocationText(Monster monster)
+        {
+            if (!JournalLocationData.ContainsKey(monster))
+            {
+                return "Unknown";
+            }
+
+            return JournalLocationData[monster].DisplayText;
+        }
+
+        public static void BuildMonsterJournalLocationData()
+        {
+            foreach (var monsterData in Monsters.MonstersCache)
+            {
+                var monster = monsterData.Value.Item2;
+
+                Patcher.Logger.LogInfo($"{monsterData.Key}: {monster.GetName()}");
+                var region = Locations.GetAreaNameFromLocationName(monsterData.Key);
+
+                if (!JournalLocationData.ContainsKey(monster))
+                    JournalLocationData[monster] = new MonsterJournalLocationData();
+
+                JournalLocationData[monster].AddAppearance(region);
+            }
+
+            // After building up the list of appearances for each monster
+            // use that to generate the display text
+            foreach (var kvp in JournalLocationData)
+            {
+                StringBuilder sb = new();
+                foreach (var data in JournalLocationData[kvp.Key].NumberOfAppearancesInRegion)
+                {
+                    // Ignore tanuki location
+                    if (data.Key == "Menu")
+                        continue;
+
+                    sb.Append($"\n - {MonsterJournalLocationData.RegionMap[data.Key]}");
+                }
+
+                kvp.Value.DisplayText = sb.ToString();
+            }
+
+        }
+
+        /// <summary>
         /// Loads all relevant monster data from json files
         /// </summary>
         public static void Load()
@@ -259,5 +309,49 @@ namespace Archipelago.MonsterSanctuary.Client.AP
     {
         public string ItemName { get; set; }
         public int Count { get; set; } = 1;
+    }
+
+    public class MonsterJournalLocationData
+    {
+        public static Dictionary<string, string> RegionMap = new()
+        {
+            { "Menu", "Anywhere" },
+            { "MountainPath", "Mountain Path" },
+            { "BlueCave", "Blue Cave" },
+            { "StrongholdDungeon", "Stronghold Dungeon" },
+            { "SnowyPeaks", "Snowy Peaks" },
+            { "SunPalace", "Sun Palace" },
+            { "AncientWoods", "Ancient Woods" },
+            { "HorizonBeach", "Horizon Beach" },
+            { "MagmaChamber", "Magma Chamber" },
+            { "Underworld", "Underworld" },
+            { "MysticalWorkshop", "Mystical Workshop" },
+            { "BlobBurg", "Blob Burg" },
+            { "ForgottenWorld", "Forgotten World" },
+            { "AbandonedTower", "Abandoned Tower" }
+        };
+
+        public static string GetFrequencyDisplayText(int amount)
+        {
+            if (amount == 1)
+                return "Unique";
+            else if (amount == 2)
+                return "Rare";
+            else if (amount == 3)
+                return "Uncommon";
+
+            return "Common";
+        }
+
+        public string DisplayText { get; set; } = "Unknown";
+        public Dictionary<string, int> NumberOfAppearancesInRegion { get; set; } = new();
+
+        public void AddAppearance(string region)
+        {
+            if (!NumberOfAppearancesInRegion.ContainsKey(region))
+                NumberOfAppearancesInRegion[region] = 0;
+
+            NumberOfAppearancesInRegion[region] += 1;
+        }
     }
 }

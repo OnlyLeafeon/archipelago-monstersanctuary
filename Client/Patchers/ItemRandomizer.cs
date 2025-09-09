@@ -62,6 +62,10 @@ namespace Archipelago.MonsterSanctuary.Client
                         return;
                     }
 
+                    string modifiedItemName = nextItem.ItemName;
+
+                    // Out here we deal with egg shifts as a result of gifted items (i.e. lady stasis)
+                    // If the item name contains "Light-Shifted" or "Dark-Shifted", we deal with it in ReceiveItem()
                     EShift eggShift = EShift.Normal;
                     if (_eggShifts.ContainsKey(nextItem.LocationID))
                     {
@@ -96,29 +100,36 @@ namespace Archipelago.MonsterSanctuary.Client
                 return GameStateManager.Instance.IsExploring();
             }
 
-            public static bool ReceiveItem(string itemName, EShift eggShift, out string finalItemName)
+            public static bool ReceiveItem(string originalItemName, EShift eggShift, out string finalItemName)
             {
-                finalItemName = itemName;
-                if (itemName == null)
+                EShift actualEggShift = eggShift; // Copy the parameter so we can potentially modify it down below.
+                finalItemName = originalItemName;
+                if (finalItemName == null)
                 {
                     Logger.LogError("Null item was received");
                     return false;
                 }
 
-                var gold = GetGoldQuantity(itemName);
+                var gold = GetGoldQuantity(finalItemName);
                 if (gold > 0)
                 {
                     GiveGoldToPlayer(gold);
                     return true;
                 }
 
-                var quantity = GetQuantityOfItem(ref itemName);
-                var newItem = GetItemByName(itemName);
+                var quantity = GetQuantityOfItem(ref finalItemName);
+
+                // When dealing with Light-Shifted and Dark-Shifted eggs, we need to adjust the name we use to search for the item
+                // But we don't want to change the name we display on the screen, so we can't change finalItemName.
+                string itemNameToSearchFor = finalItemName;
+                actualEggShift = GetEggShift(ref itemNameToSearchFor); // This will overwrite an egg shifted via gift, which is intended behavior.
+
+                var newItem = GetItemByName(itemNameToSearchFor);
 
                 if (newItem == null)
                 {
                     // This shouldn't happen. Might need a smarter way to solve this.
-                    Logger.LogError($"No item reference was found matching the name '{itemName}'.");
+                    Logger.LogError($"No item reference was found matching the name '{finalItemName}'.");
                     return false;
                 }
 
@@ -127,15 +138,15 @@ namespace Archipelago.MonsterSanctuary.Client
                     int level = GetScaledEquipmentLevel();
                     if (level > 0)
                     {
-                        string newItemName = $"{itemName}+{level}";
-                        Patcher.Logger.LogInfo("Auto-scaling equipment. New item name: " + newItem);
-                        newItem = GetItemByName(newItemName);
-                        finalItemName = newItemName;
+                        finalItemName = $"{finalItemName}+{level}";
+                        Patcher.Logger.LogInfo("Auto-scaling equipment. New item name: " + finalItemName);
+                        newItem = GetItemByName(finalItemName);
+                        finalItemName = finalItemName;
                     }
                 }
 
 
-                AddItemToPlayerInventory(ref newItem, quantity, eggShift);
+                AddItemToPlayerInventory(ref newItem, quantity, actualEggShift);
 
                 return true;
             }
@@ -492,6 +503,23 @@ namespace Archipelago.MonsterSanctuary.Client
             }
         }
         #endregion       
+
+        public static EShift GetEggShift(ref string itemName)
+        {
+            var eggShift = EShift.Normal;
+            if (itemName.StartsWith("Light-Shifted"))
+            {
+                eggShift = EShift.Light;
+                itemName = itemName.Substring(14);
+            }
+            else if (itemName.StartsWith("Dark-Shifted"))
+            {
+                eggShift = EShift.Dark;
+                itemName = itemName.Substring(13);
+            }
+
+            return eggShift;
+        }
 
         public static int GetQuantityOfItem(ref string name)
         {
