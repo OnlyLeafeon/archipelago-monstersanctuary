@@ -8,7 +8,7 @@ NOTE: This mod is currently in its alpha stage. Features are likely to be broken
 ## Installation
 - Must be using a PC version of Monster Sanctuary that is on the latest update
 - [Download the latest version of this mod from this link.](https://github.com/Gtaray/archipelago-monstersanctuary/releases/latest/download/Monster_Sanctuary_Mod.zip)
-- Extra and copy the zip file into the root folder where Monster Sanctuary is located. By default it should be something like:
+- Extract and copy the zip file into the root folder where Monster Sanctuary is located. By default it should be something like:
 `C:\Program Files (x86)\Steam\steamapps\common\Monster Sanctuary`
 	- Windows likes to place an intermediary folder when extracting zip files. Make sure that the `BepInEx` folder, `doorstop_config.ini`, and `winhttp.dll` are all located directly in the game's install folder.
 - Launch the game and close it. This will finalise the installation for BepInEx.
